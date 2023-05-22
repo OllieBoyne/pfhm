@@ -6,19 +6,29 @@ import numpy as np
 
 Line = namedtuple('Line', ['num', 'text', 'time'])
 
+# TODO:
+# - DEAL WITH DOCSTRINGS
+
 def _indent(line):
 	return (len(line) - len(line.lstrip('\t')))
+
 
 def _match_indent(line1, line2):
 	"""Modify line2 to match line1's indent"""
 	ntabs = _indent(line1)
 	return '\t' * ntabs + line2
 
+
 def skip_line(line:str):
 	if line.lstrip().startswith(('for ', 'while ', 'if ', 'else:', 'elif ', 'return ', 'def ')):
 		return True
 	if line.strip() == '':
 		return True
+
+	# comment
+	if line.lstrip().startswith('#'):
+		return True
+
 	return False
 
 def parse_time(s):
@@ -39,6 +49,55 @@ class Timer():
 	def __call__(self, line):
 		self.times[line] = perf_counter() - self.t0
 		self.t0 = perf_counter()
+
+
+class MultilineHandler:
+	"""Handle multi-line expressions by tracking opening brackets"""
+	def __init__(self):
+		self.is_active = False
+		self.stack = []
+
+	def check_line(self, line):
+		line_stack = []
+		pairs = {"{": "}", "(": ")", "[": "]"}
+
+		# add all brackets in line to stack, removing pairs
+		for c in line:
+			if c in "{[(":
+				line_stack.append(c)
+			if c in '}])':
+				if line_stack and c == pairs[line_stack[-1]]:
+					line_stack.pop()
+				else:
+					line_stack.append(c) # add to stack, hopefully to be considered with other lines
+
+		if line_stack:
+			self.stack += line_stack
+			self.is_active = True
+
+		self.resolve_stack() # resolve current stack in case multiline ends here
+
+	def resolve_stack(self):
+
+		# go through current stack, resolving found pairs if any
+		string_stack = ''.join(self.stack)
+		pairs = '()', '[]', '{}'
+		while any(p in string_stack for p in pairs):
+			for p in pairs:
+				string_stack = string_stack.replace(p, '')
+
+		# if stack is empty, multiline is over
+		if not string_stack:
+			self.is_active = False
+
+		self.stack = [*string_stack]
+
+	def balanced(self, line):
+		"""Return True if line has balanced brackets"""
+		return line.count('(') == line.count(')') and line.count('[') == line.count(']') and line.count('{') == line.count('}')
+
+	def __bool__(self):
+		return self.is_active
 
 def write_html(lines: [Line], out_file='out.html',
 			   col_min = (255, 255, 255), col_max = (255, 0, 0)):
@@ -85,11 +144,18 @@ def profile_func(func,  out_file='out.html'):
 		base_indent = _indent(def_line)
 		out_lines = [mod_def_line.lstrip('\t').rstrip()]
 
-		__profile_line_log = defaultdict(list)
+		mlh = MultilineHandler() # to handle code that spans multiple lines
+
 
 		for n, line in enumerate(lines[2:-1]):
 			line = line[base_indent:].rstrip()
-			out_lines.append(line + f'; __timer({line_start + n + 2})' * (not skip_line(line)))
+			mlh.check_line(line)
+
+			_output_line = line
+			if not mlh.is_active and not skip_line(line):
+				_output_line += f'; __timer({line_start + n + 2})'
+
+			out_lines.append(_output_line)
 
 		timer = Timer()
 		scope = {'perf_counter': perf_counter, '__timer': timer, **globals(), **locals()}
