@@ -135,13 +135,15 @@ def write_html(lines: list[Line], out_file='out.html',
 	with open(out_file, 'w') as outfile:
 		outfile.write(html)
 
-def profile_func(func,  out_file='out.html'):
+def profile_func(func,  out_file='out.html', debug=False):
 	def wrapper(*args, **kwargs):
 
 		lines, line_start = inspect.getsourcelines(func)
-		# line_start = where @ is
 
-		def_line = lines[1]
+		has_decorator = lines[0].lstrip().startswith('@')
+		# line_start = where @ or def is
+
+		def_line = lines[has_decorator]
 		mod_def_line = def_line.replace(f'def {func.__name__}', 'def profiled_func')
 		base_indent = _indent(def_line)
 		out_lines = [mod_def_line.lstrip('\t').rstrip()]
@@ -149,13 +151,13 @@ def profile_func(func,  out_file='out.html'):
 		mlh = MultilineHandler() # to handle code that spans multiple lines
 
 
-		for n, line in enumerate(lines[2:-1]):
+		for n, line in enumerate(lines[1 + has_decorator:-1]):
 			line = line[base_indent:].rstrip()
 			mlh.check_line(line)
 
 			_output_line = line
 
-			timer_call = f'__timer({line_start + n + 2})'
+			timer_call = f'__timer({line_start + n + 1 + has_decorator})'
 
 			if not mlh.is_active and not skip_line(line):
 				if line.lstrip().startswith(loops_and_conditionals):
@@ -169,14 +171,18 @@ def profile_func(func,  out_file='out.html'):
 			out_lines.append(_output_line)
 
 		timer = Timer()
-		scope = {'perf_counter': perf_counter, '__timer': timer, **globals(), **locals()}
-		print('\n'.join(out_lines))
+		scope = {'perf_counter': perf_counter, '__timer': timer, **globals(), **locals(),
+				 **func.__globals__}
+
+		if debug:
+			print('\n'.join(out_lines))
+
 		exec('\n'.join(out_lines), scope)
 		res = scope['profiled_func'](*args, **kwargs)
 
 		line_results = []
-		for n, line in enumerate(lines[1:-1]):
-			line_num = line_start + n + 1
+		for n, line in enumerate(lines[has_decorator:-1]):
+			line_num = line_start + n + has_decorator
 			times = timer.times.get(line_num, [])
 			l = Line(line_num, line, len(times), sum(times))
 			line_results.append(l)
