@@ -42,22 +42,5 @@ def func(x):
 
 And receive the output:
 
-<body><p>Elapsed: 002 ms</p><table style="border-spacing:0px";><th>Line</th><th>Calls</th><th>Elapsed</th><th>Code</th>
-<tr style="background-color:#ffffff"><td> <code>004<code> </td><td> <code>[0]<code> </td><td> <code>[000&nbsp;&nbsp;s]<code> </td><td> <code>def func(x):
-<code> </td></tr>
-<tr style="background-color:#fff2f2"><td> <code>005<code> </td><td> <code>[1]<code> </td><td> <code>[078&nbsp;us]<code> </td><td> <code>&emsp;&emsp;&emsp;&emsp;list = []
-<code> </td></tr>
-<tr style="background-color:#fff7f7"><td> <code>006<code> </td><td> <code>[100]<code> </td><td> <code>[047&nbsp;us]<code> </td><td> <code>&emsp;&emsp;&emsp;&emsp;for i in range(100):
-<code> </td></tr>
-<tr style="background-color:#fff7f7"><td> <code>007<code> </td><td> <code>[100]<code> </td><td> <code>[045&nbsp;us]<code> </td><td> <code>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;x += 2
-<code> </td></tr>
-<tr style="background-color:#ffe7e7"><td> <code>008<code> </td><td> <code>[100]<code> </td><td> <code>[152&nbsp;us]<code> </td><td> <code>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;list.append([4] * 500)
-<code> </td></tr>
-<tr style="background-color:#fff7f7"><td> <code>009<code> </td><td> <code>[100]<code> </td><td> <code>[045&nbsp;us]<code> </td><td> <code>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;x += 3
-<code> </td></tr>
-<tr style="background-color:#ff0000"><td> <code>010<code> </td><td> <code>[100]<code> </td><td> <code>[001&nbsp;ms]<code> </td><td> <code>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;list.append([4] * 10000)
-<code> </td></tr>
-<tr style="background-color:#ffdddd"><td> <code>011<code> </td><td> <code>[100]<code> </td><td> <code>[212&nbsp;us]<code> </td><td> <code>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;x += 7
-<code> </td></tr>
-</table></body>
+![Example output](example-output.png)
 
