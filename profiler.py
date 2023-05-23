@@ -4,7 +4,8 @@ from collections import defaultdict, namedtuple
 import re
 import numpy as np
 
-Line = namedtuple('Line', ['num', 'text', 'time'])
+loops_and_conditionals = ('for ', 'while ', 'if ', 'else:', 'elif ')
+Line = namedtuple('Line', ['num', 'text', 'num_calls', 'total_elapsed'])
 
 # TODO:
 # - DEAL WITH DOCSTRINGS
@@ -20,7 +21,7 @@ def _match_indent(line1, line2):
 
 
 def skip_line(line:str):
-	if line.lstrip().startswith(('for ', 'while ', 'if ', 'else:', 'elif ', 'return ', 'def ')):
+	if line.lstrip().startswith(('return ', 'def ')):
 		return True
 	if line.strip() == '':
 		return True
@@ -43,11 +44,11 @@ def parse_time(s):
 
 class Timer():
 	def __init__(self):
-		self.times = {}
+		self.times = defaultdict(list)
 		self.t0 = perf_counter()
 
 	def __call__(self, line):
-		self.times[line] = perf_counter() - self.t0
+		self.times[line].append(perf_counter() - self.t0)
 		self.t0 = perf_counter()
 
 
@@ -99,12 +100,12 @@ class MultilineHandler:
 	def __bool__(self):
 		return self.is_active
 
-def write_html(lines: [Line], out_file='out.html',
+def write_html(lines: list[Line], out_file='out.html',
 			   col_min = (255, 255, 255), col_max = (255, 0, 0)):
 	"""Given a dict of line_num:line_text, and of line_num:exec time,
 	produce an html file with the lines coloured by execution time"""
 
-	times = [l.time for l in lines]
+	times = [l.total_elapsed for l in lines]
 
 	html = '<body>'
 	html += f'<p>Elapsed: {parse_time(sum(times))}</p>'
@@ -114,15 +115,16 @@ def write_html(lines: [Line], out_file='out.html',
 	col_min, col_max = np.array(col_min), np.array(col_max)
 
 	for line in lines:
-		rval = (line.time - vmin) / (vmax - vmin)
+		rval = (line.total_elapsed - vmin) / (vmax - vmin)
 		col = col_min + (col_max - col_min) * rval
 		backghex = ''.join(f'{int(i):0{2}x}' for i in col)
 
-		elapsed = parse_time(line.time).replace(' ', '&nbsp;')
+		elapsed = parse_time(line.total_elapsed).replace(' ', '&nbsp;')
 		l = line.text.replace('\t', '&emsp;&emsp;&emsp;&emsp;')
 
 		html_row = f'<tr style="background-color:#{backghex}">'
 		html_row += f'<td> <tt>{line.num:03d}<tt> </td>'
+		html_row += f'<td> <tt>[{line.num_calls}]<tt> </td>'
 		html_row += f'<td> <tt>[{elapsed}]<tt> </td>'
 		html_row += f'<td> <tt>{l}<tt> </td>'
 		html_row += '</tr>'
@@ -152,8 +154,17 @@ def profile_func(func,  out_file='out.html'):
 			mlh.check_line(line)
 
 			_output_line = line
+
+			timer_call = f'__timer({line_start + n + 2})'
+
 			if not mlh.is_active and not skip_line(line):
-				_output_line += f'; __timer({line_start + n + 2})'
+				if line.lstrip().startswith(loops_and_conditionals):
+					# timer object must be on following line for eg if:
+					_output_line += '\n\t' + _match_indent(line, timer_call)
+
+				else:
+					# timer object can be on same line
+					_output_line += f'; {timer_call}'
 
 			out_lines.append(_output_line)
 
@@ -166,7 +177,8 @@ def profile_func(func,  out_file='out.html'):
 		line_results = []
 		for n, line in enumerate(lines[1:-1]):
 			line_num = line_start + n + 1
-			l = Line(line_num, line, timer.times.get(line_num, 0))
+			times = timer.times.get(line_num, [])
+			l = Line(line_num, line, len(times), sum(times))
 			line_results.append(l)
 
 		write_html(line_results, out_file=out_file)
