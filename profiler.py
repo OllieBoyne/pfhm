@@ -182,7 +182,7 @@ def profile_func(func,  out_file='out.html', debug=False):
 		res = scope['profiled_func'](*args, **kwargs)
 
 		line_results = []
-		for n, line in enumerate(lines[has_decorator:-1]):
+		for n, line in enumerate(lines[has_decorator:]):
 			line_num = line_start + n + has_decorator
 			times = timer.times.get(line_num, [])
 			l = Line(line_num, line, len(times), sum(times))
