@@ -1,8 +1,8 @@
+import numpy as np
 import inspect
 from time import perf_counter
 from collections import defaultdict, namedtuple
-import re
-import numpy as np
+from typing import List
 
 loops_and_conditionals = ('for ', 'while ', 'if ', 'else:', 'elif ')
 Line = namedtuple('Line', ['num', 'text', 'num_calls', 'total_elapsed'])
@@ -100,7 +100,7 @@ class MultilineHandler:
 	def __bool__(self):
 		return self.is_active
 
-def write_html(lines: list[Line], out_file='out.html',
+def write_html(lines: List[Line], out_file='out.html',
 			   col_min = (255, 255, 255), col_max = (255, 0, 0)):
 	"""Given a dict of line_num:line_text, and of line_num:exec time,
 	produce an html file with the lines coloured by execution time"""
@@ -110,6 +110,7 @@ def write_html(lines: list[Line], out_file='out.html',
 	html = '<body>'
 	html += f'<p>Elapsed: {parse_time(sum(times))}</p>'
 	html += '<table style="border-spacing:0px";>'
+	html += '<th>Line</th><th>Calls</th><th>Elapsed</th><th>Code</th>'
 
 	vmin, vmax = min(times), max(times)
 	col_min, col_max = np.array(col_min), np.array(col_max)
@@ -123,10 +124,10 @@ def write_html(lines: list[Line], out_file='out.html',
 		l = line.text.replace('\t', '&emsp;&emsp;&emsp;&emsp;')
 
 		html_row = f'<tr style="background-color:#{backghex}">'
-		html_row += f'<td> <tt>{line.num:03d}<tt> </td>'
-		html_row += f'<td> <tt>[{line.num_calls}]<tt> </td>'
-		html_row += f'<td> <tt>[{elapsed}]<tt> </td>'
-		html_row += f'<td> <tt>{l}<tt> </td>'
+		html_row += f'<td> <code>{line.num:03d}<code> </td>'
+		html_row += f'<td> <code>[{line.num_calls}]<code> </td>'
+		html_row += f'<td> <code>[{elapsed}]<code> </td>'
+		html_row += f'<td> <code>{l}<code> </td>'
 		html_row += '</tr>'
 		html += '\n' + html_row
 

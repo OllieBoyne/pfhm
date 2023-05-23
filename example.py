@@ -1,13 +1,13 @@
 from profiler import profile_func
 
-
 @profile_func
-def func(x=0):
+def func(x):
+	list = []
 	for i in range(100):
 		x += 2
-		[].append([4]*500)
+		list.append([4] * 500)
 		x += 3
-		[].append([4] * 1000)
+		list.append([4] * 10000)
 		x += 7
 	return x
 
