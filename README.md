@@ -13,7 +13,9 @@ See `example.py` for a full example.
 Either use as a decorator,
 
 ```python
-from profiler import profile_func
+from pfhm import profile_func
+
+
 @profile_func()
 def func(*args, **kwargs):
 	...

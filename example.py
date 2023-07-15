@@ -1,4 +1,4 @@
-from profiler import profile_func
+from pfhm import profile_func
 
 @profile_func
 def func(x):
