@@ -46,3 +46,10 @@ And receive the output:
 
 ![Example output](example-output.png)
 
+## Custom callbacks
+
+You can also pass a custom callback function to `profile_func` for per line timing functions. For example, for [PyTorch](https://pytorch.org/) you could profile the time spent in the GPU by passing the following callback:
+
+```python
+profile_func(func, callback=torch.cuda.synchronize)
+```

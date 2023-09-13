@@ -43,11 +43,18 @@ def parse_time(s):
 	return f'{int(v):03d} {oom_lookup[oom]}'
 
 class Timer():
-	def __init__(self):
+	def __init__(self, callable=None):
+		"""
+		:param callable: function to call on each line
+		"""
 		self.times = defaultdict(list)
 		self.t0 = perf_counter()
+		self.callable = callable
 
 	def __call__(self, line):
+		if self.callable is not None:
+			self.callable()
+
 		self.times[line].append(perf_counter() - self.t0)
 		self.t0 = perf_counter()
 
@@ -136,7 +143,7 @@ def write_html(lines: List[Line], out_file='out.html',
 	with open(out_file, 'w') as outfile:
 		outfile.write(html)
 
-def profile_func(func,  out_file='out.html', debug=False):
+def profile_func(func,  out_file='out.html', debug=False, callable=None):
 	def wrapper(*args, **kwargs):
 
 		lines, line_start = inspect.getsourcelines(func)
