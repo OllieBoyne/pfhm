@@ -74,7 +74,7 @@ class MultilineHandler:
 			if c in "{[(":
 				line_stack.append(c)
 			if c in '}])':
-				if line_stack and c == pairs[line_stack[-1]]:
+				if line_stack and c == pairs.get(line_stack[-1],False):
 					line_stack.pop()
 				else:
 					line_stack.append(c) # add to stack, hopefully to be considered with other lines
@@ -178,7 +178,7 @@ def profile_func(func,  out_file='out.html', debug=False, callable=None):
 
 			out_lines.append(_output_line)
 
-		timer = Timer()
+		timer = Timer(callable=callable)
 		scope = {'perf_counter': perf_counter, '__timer': timer, **globals(), **locals(),
 				 **func.__globals__}
 
