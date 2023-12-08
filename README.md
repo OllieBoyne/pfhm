@@ -16,7 +16,7 @@ Either use as a decorator,
 from pfhm import profile_func
 
 
-@profile_func()
+@profile_func
 def func(*args, **kwargs):
 	...
 ```
