@@ -3,12 +3,10 @@ import inspect
 from time import perf_counter
 from collections import defaultdict, namedtuple
 from typing import List
+import re
 
 loops_and_conditionals = ('for ', 'while ', 'if ', 'else:', 'elif ')
 Line = namedtuple('Line', ['num', 'text', 'num_calls', 'total_elapsed'])
-
-# TODO:
-# - DEAL WITH DOCSTRINGS
 
 def _indent(line):
 	return (len(line) - len(line.lstrip('\t')))
@@ -123,7 +121,11 @@ def write_html(lines: List[Line], out_file='out.html',
 	col_min, col_max = np.array(col_min), np.array(col_max)
 
 	for line in lines:
-		rval = (line.total_elapsed - vmin) / (vmax - vmin)
+		if vmin == vmax == 0:
+			rval = 0
+		else:
+			rval = (line.total_elapsed - vmin) / (vmax - vmin)
+
 		col = col_min + (col_max - col_min) * rval
 		backghex = ''.join(f'{int(i):0{2}x}' for i in col)
 
@@ -143,29 +145,46 @@ def write_html(lines: List[Line], out_file='out.html',
 	with open(out_file, 'w') as outfile:
 		outfile.write(html)
 
+def split_function(func):
+	"""Returns an array of lines defining the signature,
+	and an array of lines defining the function.
+	Removes docstring. Removes decorators"""
+	func_text = inspect.getsource(func)
+
+	# start from def
+	def_char = func_text.find('def ')
+
+	# end of signature is where first ) : is on a single line (can be characters between them)
+	signature_end_regex = re.compile(r'\)*.:\n')
+	end_sig = signature_end_regex.search(func_text[def_char:]).end() + def_char
+
+	# if docstring is present, get end of it (including up to the following \n)
+	split_idx = end_sig
+	if func.__doc__:
+		doc_idx = func_text.find(func.__doc__) + len(func.__doc__)
+		doc_idx = func_text.find('\n', doc_idx) + 1
+		split_idx = doc_idx
+
+	return func_text[def_char:end_sig].split("\n"), func_text[split_idx:].split("\n")
+
 def profile_func(func,  out_file='out.html', debug=False, callable=None):
 	def wrapper(*args, **kwargs):
 
-		lines, line_start = inspect.getsourcelines(func)
+		sig_lines, func_lines = split_function(func)
 
-		has_decorator = lines[0].lstrip().startswith('@')
-		# line_start = where @ or def is
-
-		def_line = lines[has_decorator]
-		mod_def_line = def_line.replace(f'def {func.__name__}', 'def profiled_func')
-		base_indent = _indent(def_line)
-		out_lines = [mod_def_line.lstrip('\t').rstrip()]
+		sig_lines[0] = sig_lines[0].replace(f'def {func.__name__}', 'def profiled_func')
+		base_indent = _indent(sig_lines[0])
+		out_lines = [i.lstrip('\t').rstrip() for i in sig_lines]
 
 		mlh = MultilineHandler() # to handle code that spans multiple lines
 
-
-		for n, line in enumerate(lines[1 + has_decorator:-1]):
+		for n, line in enumerate(func_lines):
 			line = line[base_indent:].rstrip()
 			mlh.check_line(line)
 
 			_output_line = line
 
-			timer_call = f'__timer({line_start + n + 1 + has_decorator})'
+			timer_call = f'__timer({n})'
 
 			if not mlh.is_active and not skip_line(line):
 				if line.lstrip().startswith(loops_and_conditionals):
@@ -189,9 +208,14 @@ def profile_func(func,  out_file='out.html', debug=False, callable=None):
 		res = scope['profiled_func'](*args, **kwargs)
 
 		line_results = []
-		for n, line in enumerate(lines[has_decorator:]):
-			line_num = line_start + n + has_decorator
-			times = timer.times.get(line_num, [])
+		for n, line in enumerate(sig_lines):
+			line_num = n + 1
+			l = Line(line_num, line, 1, 0)
+			line_results.append(l)
+
+		for m, line in enumerate(func_lines):
+			line_num = n + m
+			times = timer.times.get(m, [])
 			l = Line(line_num, line, len(times), sum(times))
 			line_results.append(l)
 
